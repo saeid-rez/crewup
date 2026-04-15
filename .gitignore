@@ -1,0 +1,32 @@
+# Binary
+crewup
+crewup.exe
+
+# Build output
+dist/
+*.out
+
+# Go
+*.test
+*.prof
+vendor/
+
+# GoReleaser
+/dist
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# crewup local config (don't commit your own setup)
+~/.crewup/

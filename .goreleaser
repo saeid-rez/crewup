@@ -1,0 +1,47 @@
+version: 2
+
+project_name: crewup
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: crewup
+    main: .
+    binary: crewup
+    ldflags:
+      - -X github.com/saeid-rez/crewup/cmd.Version={{.Version}}
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+brews:
+  - name: crewup
+    homepage: https://github.com/saeid-rez/crewup
+    description: "Setup AI agent crews for any AI tool on your machine"
+    repository:
+      owner: saeid-rez
+      name: homebrew-tap
