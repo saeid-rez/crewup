@@ -3,10 +3,12 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/saeid-rez/crewup/internal/config"
+	"github.com/saeid-rez/crewup/internal/mcp"
+	"github.com/saeid-rez/crewup/internal/models"
 	"github.com/saeid-rez/crewup/internal/tools"
 	"github.com/saeid-rez/crewup/pkg/ui"
+	"github.com/spf13/cobra"
 )
 
 var initCmd = &cobra.Command{
@@ -26,13 +28,15 @@ func runInit() error {
 	ui.PrintBanner()
 
 	// Step 1: Detect installed AI tools
-	fmt.Println("\n🔍 Detecting installed AI tools on your machine...\n")
+	fmt.Println("\n🔍 Detecting installed AI tools on your machine...")
+	fmt.Println()
 	detected := tools.DetectInstalledTools()
 
 	if len(detected) == 0 {
 		fmt.Println("⚠️  No supported AI tools detected.")
-		fmt.Println("   Supported: Claude CLI, GitHub Copilot, Ollama, MinMax, and more.")
-		fmt.Println("   Install one and re-run: crewup init\n")
+		fmt.Println("   Supported: GitHub Copilot, OpenCode.")
+		fmt.Println("   Install one and re-run: crewup init")
+		fmt.Println()
 		return nil
 	}
 
@@ -48,16 +52,46 @@ func runInit() error {
 		return err
 	}
 
+	// Step 3b: Configure per-agent models
+	configuredRoles, err := ui.ConfigureAgents(selectedRoles, models.All())
+	if err != nil {
+		return err
+	}
+
 	// Step 4: Ask about MCP servers
 	selectedMCPs, err := ui.SelectMCPServers()
 	if err != nil {
 		return err
 	}
 
+	// Convert []tools.AITool → []config.ToolInfo
+	toolInfos := make([]config.ToolInfo, len(selectedTools))
+	for i, t := range selectedTools {
+		toolInfos[i] = config.ToolInfo{
+			ID:         t.ID,
+			Name:       t.Name,
+			ConfigPath: t.ConfigPath,
+		}
+	}
+
 	// Step 5: Write config and apply
-	cfg := config.NewCrewConfig(selectedTools, selectedRoles, selectedMCPs)
-	if err := cfg.Apply(); err != nil {
-		return fmt.Errorf("failed to apply configuration: %w", err)
+	cfg := config.NewCrewConfig(toolInfos, configuredRoles, selectedMCPs)
+
+	writeAgentConfig := func(toolID, configPath string, roles []config.AgentRole) error {
+		writer, ok := tools.Writers[toolID]
+		if !ok {
+			return fmt.Errorf("no writer registered for tool %q", toolID)
+		}
+		return writer.WriteAgentConfig(configPath, roles)
+	}
+
+	installMCP := func(serverID, toolID string) error {
+		return mcp.Install(serverID, toolID, mcp.ScopeGlobal)
+	}
+
+	if err := cfg.Apply(writeAgentConfig, installMCP); err != nil {
+		// Non-fatal: partial failures are printed inline; only return if all failed
+		fmt.Printf("⚠️  Some configurations had errors: %v\n", err)
 	}
 
 	ui.PrintSuccess(selectedTools, selectedRoles, selectedMCPs)

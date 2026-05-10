@@ -30,3 +30,4 @@ Thumbs.db
 
 # crewup local config (don't commit your own setup)
 ~/.crewup/
+node_modules/

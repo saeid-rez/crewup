@@ -2,10 +2,27 @@ package mcp
 
 // Server represents a known MCP server crewup can install
 type Server struct {
-	ID          string
-	Name        string
-	Description string
+	ID            string
+	Name          string
+	Description   string
 	ConfigSnippet func(toolID string) map[string]interface{} // generates config per tool
+}
+
+func localNPMConfig(toolID string, pkg string, extraArgs ...string) map[string]interface{} {
+	command := append([]string{"npx", "-y", pkg}, extraArgs...)
+
+	if toolID == "opencode" {
+		return map[string]interface{}{
+			"type":    "local",
+			"command": command,
+			"enabled": true,
+		}
+	}
+
+	return map[string]interface{}{
+		"command": command[0],
+		"args":    command[1:],
+	}
 }
 
 // Registry is the master list of supported MCP servers
@@ -15,10 +32,7 @@ var Registry = []Server{
 		Name:        "Context7",
 		Description: "Up-to-date docs for any library, directly in your AI tool",
 		ConfigSnippet: func(toolID string) map[string]interface{} {
-			return map[string]interface{}{
-				"command": "npx",
-				"args":    []string{"-y", "@upstash/context7-mcp"},
-			}
+			return localNPMConfig(toolID, "@upstash/context7-mcp")
 		},
 	},
 	{
@@ -26,10 +40,7 @@ var Registry = []Server{
 		Name:        "Filesystem",
 		Description: "Read/write local files safely from your AI tool",
 		ConfigSnippet: func(toolID string) map[string]interface{} {
-			return map[string]interface{}{
-				"command": "npx",
-				"args":    []string{"-y", "@modelcontextprotocol/server-filesystem", "."},
-			}
+			return localNPMConfig(toolID, "@modelcontextprotocol/server-filesystem", ".")
 		},
 	},
 	{
@@ -37,10 +48,7 @@ var Registry = []Server{
 		Name:        "GitHub",
 		Description: "Interact with GitHub repos, PRs and issues",
 		ConfigSnippet: func(toolID string) map[string]interface{} {
-			return map[string]interface{}{
-				"command": "npx",
-				"args":    []string{"-y", "@modelcontextprotocol/server-github"},
-			}
+			return localNPMConfig(toolID, "@modelcontextprotocol/server-github")
 		},
 	},
 	{
@@ -48,10 +56,7 @@ var Registry = []Server{
 		Name:        "Brave Search",
 		Description: "Web search via Brave from inside your AI tool",
 		ConfigSnippet: func(toolID string) map[string]interface{} {
-			return map[string]interface{}{
-				"command": "npx",
-				"args":    []string{"-y", "@modelcontextprotocol/server-brave-search"},
-			}
+			return localNPMConfig(toolID, "@modelcontextprotocol/server-brave-search")
 		},
 	},
 	// TODO: add Postgres, Slack, Notion, Linear, etc.
@@ -65,14 +70,4 @@ func FindByID(id string) (Server, bool) {
 		}
 	}
 	return Server{}, false
-}
-
-// Install adds an MCP server config to the specified AI tool
-func Install(serverID string, toolID string) error {
-	// TODO:
-	// 1. Find server in registry
-	// 2. Load tool's current config file
-	// 3. Inject ConfigSnippet into the right location
-	// 4. Write config back to disk
-	return nil
 }

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/saeid-rez/crewup/internal/updater"
+	"github.com/spf13/cobra"
 )
 
 // Version is injected at build time via ldflags
@@ -44,6 +44,7 @@ func init() {
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(updateCmd)
 }
 
 var versionCmd = &cobra.Command{
@@ -51,5 +52,13 @@ var versionCmd = &cobra.Command{
 	Short: "Print the current version",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("crewup version %s\n", Version)
+	},
+}
+
+var updateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Update crewup to the latest version",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return updater.Update(Version)
 	},
 }

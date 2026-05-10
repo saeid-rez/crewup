@@ -1,0 +1,4 @@
+provider,tool,model_id,display_name,description,is_default,is_internal
+GitHub Copilot,copilot,github-copilot/claude-sonnet-4.6,Claude Sonnet 4.6 (Copilot),Claude via GitHub Copilot,true,true
+GitHub Copilot,copilot,github-copilot/gpt-4o,GPT-4o (Copilot),GPT-4o via GitHub Copilot,false,true
+GitHub Copilot,copilot,github-copilot/o3,o3 (Copilot),o3 via GitHub Copilot,false,true
