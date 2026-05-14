@@ -165,6 +165,40 @@ func SelectMCPServers() ([]string, error) {
 	return selectedIDs, nil
 }
 
+// PromptContext7APIKey asks for the Context7 API key when Context7 is selected.
+func PromptContext7APIKey() (string, error) {
+	if !isTTY() {
+		return "", fmt.Errorf("Context7 requires an API key; interactive prompt unavailable in non-interactive mode")
+	}
+
+	var apiKey string
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Context7 API Key").
+				Description("Required to configure the Context7 MCP server").
+				EchoMode(huh.EchoModePassword).
+				Value(&apiKey).
+				Validate(func(s string) error {
+					if strings.TrimSpace(s) == "" {
+						return fmt.Errorf("Context7 API key is required")
+					}
+					return nil
+				}),
+		),
+	)
+
+	if err := form.Run(); err != nil {
+		if errors.Is(err, huh.ErrUserAborted) {
+			fmt.Println("Setup cancelled.")
+			os.Exit(0)
+		}
+		return "", err
+	}
+
+	return strings.TrimSpace(apiKey), nil
+}
+
 // PrintSuccess shows a summary of what was configured
 func PrintSuccess(selectedTools []tools.AITool, roles []config.AgentRole, mcps []string) {
 	fmt.Println("\n✅ Your crew is ready!")

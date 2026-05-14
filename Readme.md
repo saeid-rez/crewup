@@ -10,7 +10,7 @@ Claude CLI, GitHub Copilot, Ollama, Aider, and more.
 
 - 🔍 **Auto-detects** installed AI tools on your machine
 - 🤖 **Scaffolds agent crews** with pre-built role prompts
-- 🔌 **Installs MCP servers** (Context7, Filesystem, GitHub, etc.) with one command
+- 🔌 **Installs MCP servers** with one command
 - 🔄 **Update checker** — notifies you when a new version is available
 - 🖥  **Cross-platform** — macOS, Linux, Windows
 
@@ -46,7 +46,7 @@ crewup init
 
 # Add an MCP server to your existing setup
 crewup add mcp context7
-crewup add mcp filesystem
+crewup add mcp context7 --project
 
 # Add an agent role
 crewup add agent tester

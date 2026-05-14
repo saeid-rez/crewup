@@ -25,8 +25,7 @@ var addMCPCmd = &cobra.Command{
 	Use:   "mcp [server-name]",
 	Short: "Add a popular MCP server to your configured AI tools",
 	Example: `  crewup add mcp context7
-  crewup add mcp filesystem
-  crewup add mcp github`,
+  crewup add mcp context7 --project`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		serverName := args[0]
@@ -38,6 +37,15 @@ var addMCPCmd = &cobra.Command{
 			return fmt.Errorf("could not load config (run `crewup init` first): %w", err)
 		}
 
+		var installOpts mcp.InstallOptions
+		if serverName == "context7" {
+			apiKey, err := ui.PromptContext7APIKey()
+			if err != nil {
+				return err
+			}
+			installOpts.Context7APIKey = apiKey
+		}
+
 		scope := mcp.ScopeGlobal
 		if projectScope {
 			scope = mcp.ScopeProject
@@ -46,7 +54,11 @@ var addMCPCmd = &cobra.Command{
 		var errs []string
 		installed := false
 		for _, tool := range cfg.Tools {
-			if err := mcp.Install(serverName, tool.ID, scope); err != nil {
+			toolScope := scope
+			if tool.ID == "opencode" {
+				toolScope = mcp.ScopeProject
+			}
+			if err := mcp.Install(serverName, tool.ID, toolScope, installOpts); err != nil {
 				errs = append(errs, fmt.Sprintf("  ⚠️  %s: %v", tool.Name, err))
 			} else {
 				installed = true
@@ -186,5 +198,5 @@ var addAgentCmd = &cobra.Command{
 func init() {
 	addCmd.AddCommand(addMCPCmd)
 	addCmd.AddCommand(addAgentCmd)
-	addMCPCmd.Flags().BoolVarP(&projectScope, "project", "p", false, "Write MCP config to project scope (opencode.json / .vscode/mcp.json)")
+	addMCPCmd.Flags().BoolVarP(&projectScope, "project", "p", false, "Write MCP config to project scope (.vscode/mcp.json). OpenCode always writes to opencode.json in the current folder")
 }

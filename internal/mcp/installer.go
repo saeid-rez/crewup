@@ -17,7 +17,7 @@ const (
 
 // MCPMerger merges an MCP server config into a specific tool's config file.
 type MCPMerger interface {
-	Merge(server Server, scope Scope) error
+	Merge(server Server, scope Scope, opts InstallOptions) error
 }
 
 var mergers = map[string]MCPMerger{
@@ -26,7 +26,7 @@ var mergers = map[string]MCPMerger{
 }
 
 // Install adds an MCP server config to the specified AI tool.
-func Install(serverID string, toolID string, scope Scope) error {
+func Install(serverID string, toolID string, scope Scope, opts InstallOptions) error {
 	server, ok := FindByID(serverID)
 	if !ok {
 		return fmt.Errorf("unknown MCP server: %s", serverID)
@@ -37,7 +37,7 @@ func Install(serverID string, toolID string, scope Scope) error {
 		return fmt.Errorf("MCP not supported for tool: %s", toolID)
 	}
 
-	return merger.Merge(server, scope)
+	return merger.Merge(server, scope, opts)
 }
 
 // expandHome replaces a leading ~ with the user's home directory.
@@ -57,7 +57,7 @@ func expandHome(path string) (string, error) {
 // VSCodeMCPMerger writes MCP config to ~/.vscode/mcp.json (global) or .vscode/mcp.json (project).
 type VSCodeMCPMerger struct{}
 
-func (m *VSCodeMCPMerger) Merge(server Server, scope Scope) error {
+func (m *VSCodeMCPMerger) Merge(server Server, scope Scope, opts InstallOptions) error {
 	var path string
 	var err error
 
@@ -84,7 +84,7 @@ func (m *VSCodeMCPMerger) Merge(server Server, scope Scope) error {
 		return nil
 	}
 
-	servers[server.ID] = server.ConfigSnippet("copilot")
+	servers[server.ID] = server.ConfigSnippet("copilot")(opts)
 	existing["servers"] = servers
 
 	if err := writeJSONWithBackup(path, existing); err != nil {
@@ -100,18 +100,8 @@ func (m *VSCodeMCPMerger) Merge(server Server, scope Scope) error {
 // or opencode.json (project).
 type OpenCodeMCPMerger struct{}
 
-func (m *OpenCodeMCPMerger) Merge(server Server, scope Scope) error {
-	var path string
-	var err error
-
-	if scope == ScopeGlobal {
-		path, err = expandHome("~/.config/opencode/opencode.json")
-	} else {
-		path = "opencode.json"
-	}
-	if err != nil {
-		return err
-	}
+func (m *OpenCodeMCPMerger) Merge(server Server, scope Scope, opts InstallOptions) error {
+	path := "opencode.json"
 
 	existing, err := readJSONOrEmpty(path)
 	if err != nil {
@@ -127,7 +117,7 @@ func (m *OpenCodeMCPMerger) Merge(server Server, scope Scope) error {
 		return nil
 	}
 
-	mcpServers[server.ID] = server.ConfigSnippet("opencode")
+	mcpServers[server.ID] = server.ConfigSnippet("opencode")(opts)
 	existing["mcp"] = mcpServers
 
 	if err := writeJSONWithBackup(path, existing); err != nil {

@@ -64,6 +64,18 @@ func runInit() error {
 		return err
 	}
 
+	var mcpOpts mcp.InstallOptions
+	for _, serverID := range selectedMCPs {
+		if serverID == "context7" {
+			apiKey, err := ui.PromptContext7APIKey()
+			if err != nil {
+				return err
+			}
+			mcpOpts.Context7APIKey = apiKey
+			break
+		}
+	}
+
 	// Convert []tools.AITool → []config.ToolInfo
 	toolInfos := make([]config.ToolInfo, len(selectedTools))
 	for i, t := range selectedTools {
@@ -86,7 +98,11 @@ func runInit() error {
 	}
 
 	installMCP := func(serverID, toolID string) error {
-		return mcp.Install(serverID, toolID, mcp.ScopeGlobal)
+		scope := mcp.ScopeGlobal
+		if toolID == "opencode" {
+			scope = mcp.ScopeProject
+		}
+		return mcp.Install(serverID, toolID, scope, mcpOpts)
 	}
 
 	if err := cfg.Apply(writeAgentConfig, installMCP); err != nil {
