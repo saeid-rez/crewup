@@ -18,19 +18,19 @@ Claude CLI, GitHub Copilot, Ollama, Aider, and more.
 
 **macOS (Homebrew):**
 ```bash
-brew tap yourusername/tap
+brew tap saeid-rez/tap
 brew install crewup
 ```
 
-**Linux / macOS (direct):**
+**Linux / macOS / Windows (GitHub Releases):**
 ```bash
-curl -sSf https://raw.githubusercontent.com/yourusername/crewup/main/install.sh | sh
+# Download the latest archive for your OS from:
+# https://github.com/saeid-rez/crewup/releases/latest
 ```
 
-**Windows (Scoop):**
-```powershell
-scoop bucket add yourusername https://github.com/yourusername/scoop-bucket
-scoop install crewup
+**Go install (if you have Go):**
+```bash
+go install github.com/saeid-rez/crewup@latest
 ```
 
 **Go install (if you have Go):**

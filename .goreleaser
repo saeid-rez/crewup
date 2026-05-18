@@ -42,6 +42,8 @@ brews:
   - name: crewup
     homepage: https://github.com/saeid-rez/crewup
     description: "Setup AI agent crews for any AI tool on your machine"
+    directory: Formula
     repository:
       owner: saeid-rez
       name: homebrew-tap
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
