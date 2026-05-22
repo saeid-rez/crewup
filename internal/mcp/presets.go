@@ -33,6 +33,21 @@ var Presets = []MCPPreset{
 			{Key: "CONTEXT7_API_KEY", Label: "Context7 API Key (optional)", Required: false, Sensitive: true},
 		},
 	},
+	{
+		ID:          "serena",
+		Name:        "Serena",
+		Description: "Semantic coding agent MCP server for IDE-aware project assistance",
+		Command:     "uvx",
+		Args: []string{
+			"--from",
+			"git+https://github.com/oraios/serena",
+			"serena",
+			"start-mcp-server",
+			"--context",
+			"ide",
+			"--project-from-cwd",
+		},
+	},
 	// TODO: add Postgres, Slack, Notion, Linear, etc.
 }
 

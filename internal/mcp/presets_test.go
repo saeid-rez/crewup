@@ -25,6 +25,14 @@ func TestFindByID(t *testing.T) {
 	if ok {
 		t.Fatal("expected FindByID to return false for unknown ID")
 	}
+
+	p, ok = FindByID("serena")
+	if !ok {
+		t.Fatal("expected to find serena preset")
+	}
+	if p.ID != "serena" {
+		t.Fatalf("expected ID %q, got %q", "serena", p.ID)
+	}
 }
 
 func TestContext7InputFields(t *testing.T) {
@@ -109,6 +117,84 @@ func TestBuildConfigNoValues(t *testing.T) {
 	cfg2 := buildConfig(p, "opencode", map[string]string{})
 	if _, hasEnv := cfg2["environment"]; hasEnv {
 		t.Error("expected no environment key when values are empty")
+	}
+}
+
+func TestBuildConfigSerenaOpencode(t *testing.T) {
+	p, ok := FindByID("serena")
+	if !ok {
+		t.Fatal("serena preset not found")
+	}
+
+	cfg := buildConfig(p, "opencode", map[string]string{})
+
+	if cfg["type"] != "local" {
+		t.Errorf("expected type %q, got %v", "local", cfg["type"])
+	}
+	if cfg["enabled"] != true {
+		t.Errorf("expected enabled true, got %v", cfg["enabled"])
+	}
+	command, ok := cfg["command"].([]interface{})
+	if !ok {
+		t.Fatalf("expected command []interface{}, got %T", cfg["command"])
+	}
+	want := []interface{}{
+		"uvx",
+		"--from",
+		"git+https://github.com/oraios/serena",
+		"serena",
+		"start-mcp-server",
+		"--context",
+		"ide",
+		"--project-from-cwd",
+	}
+	if len(command) != len(want) {
+		t.Fatalf("expected command length %d, got %d: %v", len(want), len(command), command)
+	}
+	for i := range want {
+		if command[i] != want[i] {
+			t.Fatalf("expected command[%d] = %v, got %v", i, want[i], command[i])
+		}
+	}
+	if _, hasEnv := cfg["environment"]; hasEnv {
+		t.Error("expected no environment key for serena without values")
+	}
+}
+
+func TestBuildConfigSerenaCopilot(t *testing.T) {
+	p, ok := FindByID("serena")
+	if !ok {
+		t.Fatal("serena preset not found")
+	}
+
+	cfg := buildConfig(p, "copilot", map[string]string{})
+
+	if cfg["command"] != "uvx" {
+		t.Errorf("expected command %q, got %v", "uvx", cfg["command"])
+	}
+	args, ok := cfg["args"].([]interface{})
+	if !ok {
+		t.Fatalf("expected args []interface{}, got %T", cfg["args"])
+	}
+	want := []interface{}{
+		"--from",
+		"git+https://github.com/oraios/serena",
+		"serena",
+		"start-mcp-server",
+		"--context",
+		"ide",
+		"--project-from-cwd",
+	}
+	if len(args) != len(want) {
+		t.Fatalf("expected args length %d, got %d: %v", len(want), len(args), args)
+	}
+	for i := range want {
+		if args[i] != want[i] {
+			t.Fatalf("expected args[%d] = %v, got %v", i, want[i], args[i])
+		}
+	}
+	if _, hasEnv := cfg["env"]; hasEnv {
+		t.Error("expected no env key for serena without values")
 	}
 }
 
