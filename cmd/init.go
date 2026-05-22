@@ -58,24 +58,6 @@ func runInit() error {
 		return err
 	}
 
-	// Step 4: Ask about MCP servers
-	selectedMCPs, err := ui.SelectMCPServers()
-	if err != nil {
-		return err
-	}
-
-	var mcpOpts mcp.InstallOptions
-	for _, serverID := range selectedMCPs {
-		if serverID == "context7" {
-			apiKey, err := ui.PromptContext7APIKey()
-			if err != nil {
-				return err
-			}
-			mcpOpts.Context7APIKey = apiKey
-			break
-		}
-	}
-
 	// Convert []tools.AITool → []config.ToolInfo
 	toolInfos := make([]config.ToolInfo, len(selectedTools))
 	for i, t := range selectedTools {
@@ -86,8 +68,8 @@ func runInit() error {
 		}
 	}
 
-	// Step 5: Write config and apply
-	cfg := config.NewCrewConfig(toolInfos, configuredRoles, selectedMCPs)
+	// Step 4: Write agent config and save crewup config (no MCP here)
+	cfg := config.NewCrewConfig(toolInfos, configuredRoles, nil)
 
 	writeAgentConfig := func(toolID, configPath string, roles []config.AgentRole) error {
 		writer, ok := tools.Writers[toolID]
@@ -97,19 +79,55 @@ func runInit() error {
 		return writer.WriteAgentConfig(configPath, roles)
 	}
 
-	installMCP := func(serverID, toolID string) error {
-		scope := mcp.ScopeGlobal
-		if toolID == "opencode" {
-			scope = mcp.ScopeProject
-		}
-		return mcp.Install(serverID, toolID, scope, mcpOpts)
-	}
-
-	if err := cfg.Apply(writeAgentConfig, installMCP); err != nil {
-		// Non-fatal: partial failures are printed inline; only return if all failed
+	if err := cfg.Apply(writeAgentConfig); err != nil {
+		// Non-fatal: partial failures are printed inline
 		fmt.Printf("⚠️  Some configurations had errors: %v\n", err)
 	}
 
-	ui.PrintSuccess(selectedTools, selectedRoles, selectedMCPs)
+	// Step 5: MCP preset selection and install
+	selectedPresets, err := ui.SelectMCPPresets()
+	if err != nil {
+		return err
+	}
+
+	var installedMCPIDs []string
+	for _, preset := range selectedPresets {
+		values, err := ui.PromptInputFields(preset)
+		if err != nil {
+			fmt.Printf("  ⚠️  %s: skipping input prompts (%v)\n", preset.Name, err)
+			continue
+		}
+
+		targetTools, err := ui.SelectTargetTools(toolInfos, preset.Name)
+		if err != nil {
+			fmt.Printf("  ⚠️  %s: skipping tool selection (%v)\n", preset.Name, err)
+			continue
+		}
+
+		successCount := 0
+		for _, tool := range targetTools {
+			scope := mcp.ScopeGlobal
+			if tool.ID == "opencode" {
+				scope = mcp.ScopeProject
+			}
+			if err := mcp.Install(preset.ID, tool.ID, scope, mcp.InstallOptions{Values: values}); err != nil {
+				fmt.Printf("  ⚠️  %s: %v\n", tool.Name, err)
+			} else {
+				successCount++
+			}
+		}
+
+		if successCount > 0 {
+			installedMCPIDs = append(installedMCPIDs, preset.ID)
+		}
+	}
+
+	// Update config with installed MCP IDs
+	cfg.MCPServers = installedMCPIDs
+	if err := cfg.Save(); err != nil {
+		fmt.Printf("  ⚠️  Could not update config.json with MCP servers: %v\n", err)
+	}
+
+	ui.PrintSuccess(selectedTools, selectedRoles, installedMCPIDs)
 	return nil
 }

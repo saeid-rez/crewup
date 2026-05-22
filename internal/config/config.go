@@ -93,13 +93,11 @@ func NewCrewConfig(selectedTools []ToolInfo, roles []AgentRole, mcpServers []str
 	}
 }
 
-// Apply writes the config to disk and applies changes to each tool.
-// It calls the appropriate writer for each configured tool and installs
-// selected MCP servers. Partial failures are aggregated — all tools are
-// attempted even if one fails.
+// Apply writes the config to disk and applies agent config changes to each tool.
+// MCP installs are handled explicitly by the caller (cmd/init.go, cmd/add.go).
+// Partial failures are aggregated — all tools are attempted even if one fails.
 func (c *CrewConfig) Apply(
 	writeAgentConfig func(toolID, configPath string, roles []AgentRole) error,
-	installMCP func(serverID, toolID string) error,
 ) error {
 	if err := c.save(); err != nil {
 		return err
@@ -113,13 +111,6 @@ func (c *CrewConfig) Apply(
 			errs = append(errs, fmt.Errorf("%s agent config: %w", tool.Name, err))
 		} else {
 			fmt.Printf("  ✅ %s configured\n", tool.Name)
-		}
-
-		for _, serverID := range c.MCPServers {
-			if err := installMCP(serverID, tool.ID); err != nil {
-				fmt.Printf("  ⚠️  %s MCP %s: skipped (%v)\n", tool.Name, serverID, err)
-				errs = append(errs, fmt.Errorf("%s MCP %s: %w", tool.Name, serverID, err))
-			}
 		}
 	}
 

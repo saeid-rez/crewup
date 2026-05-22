@@ -20,6 +20,9 @@ func isTTY() bool {
 	return isatty.IsTerminal(os.Stdin.Fd()) && isatty.IsTerminal(os.Stdout.Fd())
 }
 
+// IsTTY is the exported version of isTTY for use by cmd packages.
+func IsTTY() bool { return isTTY() }
+
 // PrintBanner prints the crewup welcome banner
 func PrintBanner() {
 	fmt.Print(`
@@ -130,17 +133,19 @@ func SelectAgentRoles() ([]config.AgentRole, error) {
 	return result, nil
 }
 
-// SelectMCPServers lets user pick which MCP servers to install.
-func SelectMCPServers() ([]string, error) {
+// SelectMCPPresets lets user pick which MCP presets to install.
+// Returns full MCPPreset structs so callers have access to Inputs.
+// Non-TTY: returns empty slice (skip MCP).
+func SelectMCPPresets() ([]mcp.MCPPreset, error) {
 	// Non-TTY: skip MCP selection
 	if !isTTY() {
 		fmt.Println("Non-interactive mode: skipping MCP server selection.")
-		return []string{}, nil
+		return []mcp.MCPPreset{}, nil
 	}
 
-	opts := make([]huh.Option[string], len(mcp.Registry))
-	for i, s := range mcp.Registry {
-		opts[i] = huh.NewOption(s.Name+" — "+s.Description, s.ID)
+	opts := make([]huh.Option[string], len(mcp.Presets))
+	for i, p := range mcp.Presets {
+		opts[i] = huh.NewOption(p.Name+" — "+p.Description, p.ID)
 	}
 
 	var selectedIDs []string
@@ -162,29 +167,95 @@ func SelectMCPServers() ([]string, error) {
 		return nil, err
 	}
 
-	return selectedIDs, nil
+	idSet := make(map[string]bool, len(selectedIDs))
+	for _, id := range selectedIDs {
+		idSet[id] = true
+	}
+	var result []mcp.MCPPreset
+	for _, p := range mcp.Presets {
+		if idSet[p.ID] {
+			result = append(result, p)
+		}
+	}
+	return result, nil
 }
 
-// PromptContext7APIKey asks for the Context7 API key when Context7 is selected.
-func PromptContext7APIKey() (string, error) {
-	if !isTTY() {
-		return "", fmt.Errorf("Context7 requires an API key; interactive prompt unavailable in non-interactive mode")
+// PromptInputFields prompts the user for each InputField in the preset.
+// Non-TTY + any Required field → returns a descriptive error.
+// Non-TTY + all optional → returns empty map, nil.
+func PromptInputFields(preset mcp.MCPPreset) (map[string]string, error) {
+	if len(preset.Inputs) == 0 {
+		return map[string]string{}, nil
 	}
 
-	var apiKey string
+	if !isTTY() {
+		for _, f := range preset.Inputs {
+			if f.Required {
+				return nil, fmt.Errorf("preset %q requires field %q (%s) but running in non-interactive mode", preset.Name, f.Key, f.Label)
+			}
+		}
+		return map[string]string{}, nil
+	}
+
+	ptrs := make([]*string, len(preset.Inputs))
+	fields := make([]huh.Field, len(preset.Inputs))
+	for i, f := range preset.Inputs {
+		s := new(string)
+		ptrs[i] = s
+		inp := huh.NewInput().
+			Title(f.Label).
+			Value(s)
+		if f.Sensitive {
+			inp = inp.EchoMode(huh.EchoModePassword)
+		}
+		if f.Required {
+			label := f.Label
+			inp = inp.Validate(func(v string) error {
+				if strings.TrimSpace(v) == "" {
+					return fmt.Errorf("%s is required", label)
+				}
+				return nil
+			})
+		}
+		fields[i] = inp
+	}
+
+	form := huh.NewForm(huh.NewGroup(fields...))
+	if err := form.Run(); err != nil {
+		if errors.Is(err, huh.ErrUserAborted) {
+			fmt.Println("Setup cancelled.")
+			os.Exit(0)
+		}
+		return nil, err
+	}
+
+	result := make(map[string]string, len(preset.Inputs))
+	for i, f := range preset.Inputs {
+		result[f.Key] = strings.TrimSpace(*ptrs[i])
+	}
+	return result, nil
+}
+
+// SelectTargetTools lets user pick which configured tools to install a preset for.
+// Non-TTY: returns all tools.
+func SelectTargetTools(configured []config.ToolInfo, presetName string) ([]config.ToolInfo, error) {
+	if !isTTY() {
+		return configured, nil
+	}
+
+	opts := make([]huh.Option[string], len(configured))
+	for i, t := range configured {
+		opts[i] = huh.NewOption(t.Name, t.ID).Selected(true)
+	}
+
+	var selectedIDs []string
 	form := huh.NewForm(
 		huh.NewGroup(
-			huh.NewInput().
-				Title("Context7 API Key").
-				Description("Required to configure the Context7 MCP server").
-				EchoMode(huh.EchoModePassword).
-				Value(&apiKey).
-				Validate(func(s string) error {
-					if strings.TrimSpace(s) == "" {
-						return fmt.Errorf("Context7 API key is required")
-					}
-					return nil
-				}),
+			huh.NewMultiSelect[string]().
+				Title(fmt.Sprintf("🛠  Install %s for which tools?", presetName)).
+				Description("Space to toggle, Enter to confirm").
+				Options(opts...).
+				Value(&selectedIDs),
 		),
 	)
 
@@ -193,10 +264,20 @@ func PromptContext7APIKey() (string, error) {
 			fmt.Println("Setup cancelled.")
 			os.Exit(0)
 		}
-		return "", err
+		return nil, err
 	}
 
-	return strings.TrimSpace(apiKey), nil
+	idSet := make(map[string]bool, len(selectedIDs))
+	for _, id := range selectedIDs {
+		idSet[id] = true
+	}
+	var result []config.ToolInfo
+	for _, t := range configured {
+		if idSet[t.ID] {
+			result = append(result, t)
+		}
+	}
+	return result, nil
 }
 
 // PrintSuccess shows a summary of what was configured

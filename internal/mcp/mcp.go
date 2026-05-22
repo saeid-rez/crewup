@@ -1,69 +1,33 @@
 package mcp
 
-import "strings"
+import "fmt"
 
-// Server represents a known MCP server crewup can install
-type Server struct {
-	ID            string
-	Name          string
-	Description   string
-	ConfigSnippet func(toolID string) func(opts InstallOptions) map[string]interface{} // generates config per tool
-}
-
-func localNPMConfig(toolID string, pkg string, extraArgs ...string) func(opts InstallOptions) map[string]interface{} {
-	return func(opts InstallOptions) map[string]interface{} {
-		command := append([]string{"npx", "-y", pkg}, extraArgs...)
-
-		if toolID == "opencode" {
-			cfg := map[string]interface{}{
-				"type":    "local",
-				"command": command,
-				"enabled": true,
-			}
-			if apiKey := strings.TrimSpace(opts.Context7APIKey); apiKey != "" {
-				cfg["environment"] = map[string]interface{}{
-					"CONTEXT7_API_KEY": apiKey,
-				}
-			}
-			return cfg
-		}
-
-		cfg := map[string]interface{}{
-			"command": command[0],
-			"args":    command[1:],
-		}
-		if apiKey := strings.TrimSpace(opts.Context7APIKey); apiKey != "" {
-			cfg["env"] = map[string]interface{}{
-				"CONTEXT7_API_KEY": apiKey,
-			}
-		}
-		return cfg
-	}
-}
-
+// InstallOptions carries user-supplied values for an MCP preset install.
 type InstallOptions struct {
-	Context7APIKey string
+	Values map[string]string // InputField.Key → user-supplied string
 }
 
-// Registry is the master list of supported MCP servers
-var Registry = []Server{
-	{
-		ID:          "context7",
-		Name:        "Context7",
-		Description: "Up-to-date docs for any library, directly in your AI tool",
-		ConfigSnippet: func(toolID string) func(opts InstallOptions) map[string]interface{} {
-			return localNPMConfig(toolID, "@upstash/context7-mcp")
-		},
-	},
-	// TODO: add Postgres, Slack, Notion, Linear, etc.
+// MCPMerger merges an MCP preset config into a specific tool's config file.
+type MCPMerger interface {
+	Merge(preset MCPPreset, scope Scope, opts InstallOptions) error
 }
 
-// FindByID returns a server from the registry by ID
-func FindByID(id string) (Server, bool) {
-	for _, s := range Registry {
-		if s.ID == id {
-			return s, true
-		}
+var mergers = map[string]MCPMerger{
+	"copilot":  &VSCodeMCPMerger{},
+	"opencode": &OpenCodeMCPMerger{},
+}
+
+// Install adds an MCP preset config to the specified AI tool.
+func Install(serverID string, toolID string, scope Scope, opts InstallOptions) error {
+	preset, ok := FindByID(serverID)
+	if !ok {
+		return fmt.Errorf("unknown MCP server: %s", serverID)
 	}
-	return Server{}, false
+
+	merger, ok := mergers[toolID]
+	if !ok {
+		return fmt.Errorf("MCP not supported for tool: %s", toolID)
+	}
+
+	return merger.Merge(preset, scope, opts)
 }

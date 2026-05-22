@@ -25,11 +25,40 @@ var addMCPCmd = &cobra.Command{
 	Use:   "mcp [server-name]",
 	Short: "Add a popular MCP server to your configured AI tools",
 	Example: `  crewup add mcp context7
-  crewup add mcp context7 --project`,
-	Args: cobra.ExactArgs(1),
+  crewup add mcp context7 --project
+  crewup add mcp`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		serverName := args[0]
-		fmt.Printf("🔌 Adding MCP server: %s\n", serverName)
+		// Resolve presets before loading config so we can fail fast on bad input.
+		var presets []mcp.MCPPreset
+
+		if len(args) == 1 {
+			// Arg provided: validate immediately
+			serverName := args[0]
+			preset, ok := mcp.FindByID(serverName)
+			if !ok {
+				ids := make([]string, len(mcp.Presets))
+				for i, p := range mcp.Presets {
+					ids[i] = p.ID
+				}
+				return fmt.Errorf("unknown MCP server %q. Valid presets: %s", serverName, strings.Join(ids, ", "))
+			}
+			presets = []mcp.MCPPreset{preset}
+		} else {
+			// No arg: non-TTY must return a clear error; TTY shows interactive picker
+			if !ui.IsTTY() {
+				return fmt.Errorf("crewup add mcp requires a server name in non-interactive mode. Run: crewup add mcp <name>")
+			}
+			selected, err := ui.SelectMCPPresets()
+			if err != nil {
+				return err
+			}
+			if len(selected) == 0 {
+				// TTY user selected nothing — exit cleanly
+				return nil
+			}
+			presets = selected
+		}
 
 		// Load config to find which tools are configured
 		cfg, err := config.Load()
@@ -37,63 +66,74 @@ var addMCPCmd = &cobra.Command{
 			return fmt.Errorf("could not load config (run `crewup init` first): %w", err)
 		}
 
-		var installOpts mcp.InstallOptions
-		if serverName == "context7" {
-			apiKey, err := ui.PromptContext7APIKey()
-			if err != nil {
-				return err
-			}
-			installOpts.Context7APIKey = apiKey
-		}
-
 		scope := mcp.ScopeGlobal
 		if projectScope {
 			scope = mcp.ScopeProject
 		}
+		_ = scope // per-tool scope is determined below
 
-		var errs []string
-		installed := false
-		for _, tool := range cfg.Tools {
-			toolScope := scope
-			if tool.ID == "opencode" {
-				toolScope = mcp.ScopeProject
+		for _, preset := range presets {
+			fmt.Printf("🔌 Adding MCP server: %s\n", preset.Name)
+
+			values, err := ui.PromptInputFields(preset)
+			if err != nil {
+				fmt.Printf("  ⚠️  %s: skipping (%v)\n", preset.Name, err)
+				continue
 			}
-			if err := mcp.Install(serverName, tool.ID, toolScope, installOpts); err != nil {
-				errs = append(errs, fmt.Sprintf("  ⚠️  %s: %v", tool.Name, err))
+
+			targetTools, err := ui.SelectTargetTools(cfg.Tools, preset.Name)
+			if err != nil {
+				fmt.Printf("  ⚠️  %s: skipping tool selection (%v)\n", preset.Name, err)
+				continue
+			}
+
+			var errs []string
+			successCount := 0
+			for _, tool := range targetTools {
+				toolScope := mcp.ScopeGlobal
+				if projectScope {
+					toolScope = mcp.ScopeProject
+				}
+				if tool.ID == "opencode" {
+					toolScope = mcp.ScopeProject
+				}
+				if err := mcp.Install(preset.ID, tool.ID, toolScope, mcp.InstallOptions{Values: values}); err != nil {
+					errs = append(errs, fmt.Sprintf("  ⚠️  %s: %v", tool.Name, err))
+				} else {
+					successCount++
+				}
+			}
+
+			if len(errs) > 0 {
+				for _, e := range errs {
+					fmt.Println(e)
+				}
+			}
+
+			// Only record preset ID after at least one successful install
+			if successCount > 0 {
+				alreadyPresent := false
+				for _, s := range cfg.MCPServers {
+					if s == preset.ID {
+						alreadyPresent = true
+						break
+					}
+				}
+				if !alreadyPresent {
+					cfg.MCPServers = append(cfg.MCPServers, preset.ID)
+					if saveErr := cfg.Save(); saveErr != nil {
+						fmt.Printf("  ⚠️  Could not update config.json: %v\n", saveErr)
+					}
+				}
+			}
+
+			if successCount == 0 {
+				fmt.Println("⚠️  No MCP servers were installed. Check the errors above.")
+			} else if len(errs) > 0 {
+				fmt.Printf("⚠️  Partially added %s (some tools failed — see above).\n", preset.Name)
 			} else {
-				installed = true
+				fmt.Printf("✓ Done adding %s!\n", preset.Name)
 			}
-		}
-
-		if len(errs) > 0 {
-			for _, e := range errs {
-				fmt.Println(e)
-			}
-		}
-
-		// Update config.json to record the newly added MCP server.
-		if installed {
-			alreadyPresent := false
-			for _, s := range cfg.MCPServers {
-				if s == serverName {
-					alreadyPresent = true
-					break
-				}
-			}
-			if !alreadyPresent {
-				cfg.MCPServers = append(cfg.MCPServers, serverName)
-				if saveErr := cfg.Save(); saveErr != nil {
-					fmt.Printf("  ⚠️  Could not update config.json: %v\n", saveErr)
-				}
-			}
-		}
-
-		if !installed {
-			fmt.Println("⚠️  No MCP servers were installed. Check the errors above.")
-		} else if len(errs) > 0 {
-			fmt.Printf("⚠️  Partially added %s (some tools failed — see above).\n", serverName)
-		} else {
-			fmt.Printf("✓ Done adding %s!\n", serverName)
 		}
 		return nil
 	},

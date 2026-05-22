@@ -25,14 +25,21 @@ func readJSONOrEmpty(path string) (map[string]interface{}, error) {
 }
 
 // writeJSONWithBackup writes a map as pretty JSON to path, backing up any existing file first.
-// Preserves the existing file's permissions if the file already exists.
-func writeJSONWithBackup(path string, data map[string]interface{}) error {
+// If sensitive is true, both the target file and the backup are written with 0600 permissions
+// regardless of the existing file's mode. Otherwise the existing file's permissions are preserved
+// (defaulting to 0644 for new files).
+func writeJSONWithBackup(path string, data map[string]interface{}, sensitive bool) error {
 	backupPath := path + ".crewup.bak"
 	perm := os.FileMode(0644)
+	if sensitive {
+		perm = os.FileMode(0600)
+	}
 
-	// Backup existing file and capture its permissions.
+	// Backup existing file and capture its permissions (unless sensitive overrides).
 	if info, err := os.Stat(path); err == nil {
-		perm = info.Mode().Perm()
+		if !sensitive {
+			perm = info.Mode().Perm()
+		}
 		if existing, err := os.ReadFile(path); err == nil {
 			_ = os.WriteFile(backupPath, existing, perm)
 		}
