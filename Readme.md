@@ -33,11 +33,6 @@ brew install crewup
 go install github.com/saeid-rez/crewup@latest
 ```
 
-**Go install (if you have Go):**
-```bash
-go install github.com/yourusername/crewup@latest
-```
-
 ## Usage
 
 ```bash
