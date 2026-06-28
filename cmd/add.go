@@ -1,10 +1,11 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/huh"
+	"charm.land/huh/v2"
 	"github.com/saeid-rez/crewup/internal/agentdefs"
 	"github.com/saeid-rez/crewup/internal/config"
 	"github.com/saeid-rez/crewup/internal/mcp"
@@ -51,6 +52,10 @@ var addMCPCmd = &cobra.Command{
 			}
 			selected, err := ui.SelectMCPPresets()
 			if err != nil {
+				if errors.Is(err, ui.ErrUserCancelled) {
+					fmt.Println("Setup cancelled.")
+					return nil
+				}
 				return err
 			}
 			if len(selected) == 0 {
@@ -83,6 +88,10 @@ var addMCPCmd = &cobra.Command{
 
 			targetTools, err := ui.SelectTargetTools(cfg.Tools, preset.Name)
 			if err != nil {
+				if errors.Is(err, ui.ErrUserCancelled) {
+					fmt.Println("Setup cancelled.")
+					return nil
+				}
 				fmt.Printf("  ⚠️  %s: skipping tool selection (%v)\n", preset.Name, err)
 				continue
 			}

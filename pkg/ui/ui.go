@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/huh/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/mattn/go-isatty"
 	"github.com/saeid-rez/crewup/internal/config"
 	"github.com/saeid-rez/crewup/internal/mcp"
@@ -50,27 +50,13 @@ func SelectTools(detected []tools.AITool) ([]tools.AITool, error) {
 		return detected, nil
 	}
 
-	opts := make([]huh.Option[string], len(detected))
+	items := make([]item, len(detected))
 	for i, t := range detected {
-		opts[i] = huh.NewOption(t.Name+" ("+t.ConfigPath+")", t.ID).Selected(true)
+		items[i] = item{id: t.ID, title: t.Name, desc: t.ConfigPath, selected: true}
 	}
 
-	var selectedIDs []string
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("🔍 Select AI tools to configure").
-				Description("Space to toggle, Enter to confirm").
-				Options(opts...).
-				Value(&selectedIDs),
-		),
-	)
-
-	if err := form.Run(); err != nil {
-		if errors.Is(err, huh.ErrUserAborted) {
-			fmt.Println("Setup cancelled.")
-			os.Exit(0)
-		}
+	selectedIDs, err := RunMultiSelect("🔍 Select AI tools to configure", items)
+	if err != nil {
 		return nil, err
 	}
 
@@ -96,27 +82,13 @@ func SelectAgentRoles() ([]config.AgentRole, error) {
 		return config.DefaultRoles, nil
 	}
 
-	opts := make([]huh.Option[string], len(config.DefaultRoles))
+	items := make([]item, len(config.DefaultRoles))
 	for i, r := range config.DefaultRoles {
-		opts[i] = huh.NewOption(r.Name+" — "+r.Description, r.ID).Selected(true)
+		items[i] = item{id: r.ID, title: r.Name, desc: r.Description, selected: true}
 	}
 
-	var selectedIDs []string
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("🤖 Select agent roles for your crew").
-				Description("Space to toggle, Enter to confirm").
-				Options(opts...).
-				Value(&selectedIDs),
-		),
-	)
-
-	if err := form.Run(); err != nil {
-		if errors.Is(err, huh.ErrUserAborted) {
-			fmt.Println("Setup cancelled.")
-			os.Exit(0)
-		}
+	selectedIDs, err := RunMultiSelect("🤖 Select agent roles for your crew", items)
+	if err != nil {
 		return nil, err
 	}
 
@@ -143,27 +115,13 @@ func SelectMCPPresets() ([]mcp.MCPPreset, error) {
 		return []mcp.MCPPreset{}, nil
 	}
 
-	opts := make([]huh.Option[string], len(mcp.Presets))
+	items := make([]item, len(mcp.Presets))
 	for i, p := range mcp.Presets {
-		opts[i] = huh.NewOption(p.Name+" — "+p.Description, p.ID)
+		items[i] = item{id: p.ID, title: p.Name, desc: p.Description}
 	}
 
-	var selectedIDs []string
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("🔌 Popular MCP servers (optional)").
-				Description("Space to toggle, Enter to confirm (or skip)").
-				Options(opts...).
-				Value(&selectedIDs),
-		),
-	)
-
-	if err := form.Run(); err != nil {
-		if errors.Is(err, huh.ErrUserAborted) {
-			fmt.Println("Setup cancelled.")
-			os.Exit(0)
-		}
+	selectedIDs, err := RunMultiSelect("🔌 Popular MCP servers (optional)", items)
+	if err != nil {
 		return nil, err
 	}
 
@@ -243,27 +201,13 @@ func SelectTargetTools(configured []config.ToolInfo, presetName string) ([]confi
 		return configured, nil
 	}
 
-	opts := make([]huh.Option[string], len(configured))
+	items := make([]item, len(configured))
 	for i, t := range configured {
-		opts[i] = huh.NewOption(t.Name, t.ID).Selected(true)
+		items[i] = item{id: t.ID, title: t.Name, selected: true}
 	}
 
-	var selectedIDs []string
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title(fmt.Sprintf("🛠  Install %s for which tools?", presetName)).
-				Description("Space to toggle, Enter to confirm").
-				Options(opts...).
-				Value(&selectedIDs),
-		),
-	)
-
-	if err := form.Run(); err != nil {
-		if errors.Is(err, huh.ErrUserAborted) {
-			fmt.Println("Setup cancelled.")
-			os.Exit(0)
-		}
+	selectedIDs, err := RunMultiSelect(fmt.Sprintf("🛠  Install %s for which tools?", presetName), items)
+	if err != nil {
 		return nil, err
 	}
 

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/saeid-rez/crewup/internal/config"
@@ -43,12 +44,20 @@ func runInit() error {
 	// Step 2: Let user pick which tools to configure
 	selectedTools, err := ui.SelectTools(detected)
 	if err != nil {
+		if errors.Is(err, ui.ErrUserCancelled) {
+			fmt.Println("Setup cancelled.")
+			return nil
+		}
 		return err
 	}
 
 	// Step 3: Let user pick which agent roles to set up
 	selectedRoles, err := ui.SelectAgentRoles()
 	if err != nil {
+		if errors.Is(err, ui.ErrUserCancelled) {
+			fmt.Println("Setup cancelled.")
+			return nil
+		}
 		return err
 	}
 
@@ -87,6 +96,10 @@ func runInit() error {
 	// Step 5: MCP preset selection and install
 	selectedPresets, err := ui.SelectMCPPresets()
 	if err != nil {
+		if errors.Is(err, ui.ErrUserCancelled) {
+			fmt.Println("Setup cancelled.")
+			return nil
+		}
 		return err
 	}
 
@@ -100,6 +113,10 @@ func runInit() error {
 
 		targetTools, err := ui.SelectTargetTools(toolInfos, preset.Name)
 		if err != nil {
+			if errors.Is(err, ui.ErrUserCancelled) {
+				fmt.Println("Setup cancelled.")
+				return nil
+			}
 			fmt.Printf("  ⚠️  %s: skipping tool selection (%v)\n", preset.Name, err)
 			continue
 		}
