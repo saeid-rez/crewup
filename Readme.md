@@ -74,7 +74,7 @@ crewup/
 
 ## Roadmap
 
-- [ ] Bubbletea interactive menus for init wizard
+- [x] Bubbletea interactive menus for init wizard
 - [ ] Self-update binary in-place
 - [ ] Claude CLI agent config writer
 - [ ] Ollama Modelfile agent config writer

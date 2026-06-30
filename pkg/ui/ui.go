@@ -14,6 +14,16 @@ import (
 	"github.com/saeid-rez/crewup/internal/tools"
 )
 
+func normalizePromptError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, huh.ErrUserAborted) {
+		return ErrUserCancelled
+	}
+	return err
+}
+
 // isTTY returns true if both stdin and stdout are terminals (not piped/CI).
 // Forms read from stdin, so we must check both to avoid hangs.
 func isTTY() bool {
@@ -180,11 +190,7 @@ func PromptInputFields(preset mcp.MCPPreset) (map[string]string, error) {
 
 	form := huh.NewForm(huh.NewGroup(fields...))
 	if err := form.Run(); err != nil {
-		if errors.Is(err, huh.ErrUserAborted) {
-			fmt.Println("Setup cancelled.")
-			os.Exit(0)
-		}
-		return nil, err
+		return nil, normalizePromptError(err)
 	}
 
 	result := make(map[string]string, len(preset.Inputs))

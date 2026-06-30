@@ -1,9 +1,7 @@
 package ui
 
 import (
-	"errors"
 	"fmt"
-	"os"
 
 	"charm.land/huh/v2"
 	"github.com/saeid-rez/crewup/internal/config"
@@ -33,11 +31,7 @@ func ConfigureAgents(roles []config.AgentRole, allModels []models.Model) ([]conf
 		),
 	)
 	if err := form.Run(); err != nil {
-		if errors.Is(err, huh.ErrUserAborted) {
-			fmt.Println("Setup cancelled.")
-			os.Exit(0)
-		}
-		return nil, err
+		return nil, normalizePromptError(err)
 	}
 
 	if useDefaults {
@@ -61,11 +55,7 @@ func ConfigureAgents(roles []config.AgentRole, allModels []models.Model) ([]conf
 		),
 	)
 	if err := form2.Run(); err != nil {
-		if errors.Is(err, huh.ErrUserAborted) {
-			fmt.Println("Setup cancelled.")
-			os.Exit(0)
-		}
-		return nil, err
+		return nil, normalizePromptError(err)
 	}
 
 	customizeSet := make(map[string]bool, len(toCustomize))
@@ -122,11 +112,7 @@ func ConfigureAgent(role config.AgentRole, allModels []models.Model) (config.Age
 		),
 	)
 	if err := form1.Run(); err != nil {
-		if errors.Is(err, huh.ErrUserAborted) {
-			fmt.Println("Setup cancelled.")
-			os.Exit(0)
-		}
-		return role, err
+		return role, normalizePromptError(err)
 	}
 
 	// Step 2: pick model
@@ -158,11 +144,7 @@ func ConfigureAgent(role config.AgentRole, allModels []models.Model) (config.Age
 		),
 	)
 	if err := form2.Run(); err != nil {
-		if errors.Is(err, huh.ErrUserAborted) {
-			fmt.Println("Setup cancelled.")
-			os.Exit(0)
-		}
-		return role, err
+		return role, normalizePromptError(err)
 	}
 
 	role.Model = &config.ModelSelection{
