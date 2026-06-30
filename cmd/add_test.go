@@ -57,3 +57,13 @@ func TestAddMCPUnknownPreset(t *testing.T) {
 		t.Fatalf("expected error to mention the unknown ID, got: %v", err)
 	}
 }
+
+func TestAddMenuNonTTYShowsHelp(t *testing.T) {
+	restoreTTY := simulateNonTTY(t)
+	defer restoreTTY()
+
+	err := runAddMenu()
+	if err != nil {
+		t.Fatalf("expected nil error from non-TTY add menu help path, got: %v", err)
+	}
+}

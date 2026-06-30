@@ -64,6 +64,10 @@ func runInit() error {
 	// Step 3b: Configure per-agent models
 	configuredRoles, err := ui.ConfigureAgents(selectedRoles, models.All())
 	if err != nil {
+		if errors.Is(err, ui.ErrUserCancelled) {
+			fmt.Println("Setup cancelled.")
+			return nil
+		}
 		return err
 	}
 
@@ -107,6 +111,10 @@ func runInit() error {
 	for _, preset := range selectedPresets {
 		values, err := ui.PromptInputFields(preset)
 		if err != nil {
+			if errors.Is(err, ui.ErrUserCancelled) {
+				fmt.Println("Setup cancelled.")
+				return nil
+			}
 			fmt.Printf("  ⚠️  %s: skipping input prompts (%v)\n", preset.Name, err)
 			continue
 		}

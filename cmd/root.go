@@ -40,6 +40,7 @@ func Execute() {
 }
 
 func init() {
+	configureRootMenu()
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)
@@ -59,6 +60,6 @@ var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update crewup to the latest version",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return updater.Update(Version)
+		return updaterCmdRun()
 	},
 }
