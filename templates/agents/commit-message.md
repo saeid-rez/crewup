@@ -4,7 +4,7 @@ name: Commit Message
 description: Writes clear, conventional commit messages
 mode: subagent
 default_provider: GitHub Copilot
-default_model: GPT-5 mini (copilot)
+default_model: github-copilot/claude-sonnet-4.6
 temperature: 0.2
 max_steps: 3
 tools_allow: read,search,bash

@@ -4,7 +4,7 @@ name: Implementor
 description: Executes the plan and writes production-quality code
 mode: subagent
 default_provider: GitHub Copilot
-default_model: Claude Sonnet 4.6 (copilot)
+default_model: github-copilot/claude-sonnet-4.6
 temperature: 0.15
 max_steps: 12
 tools_allow: read,edit,search,bash

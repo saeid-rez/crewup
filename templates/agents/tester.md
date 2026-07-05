@@ -4,7 +4,7 @@ name: Tester
 description: Writes and runs tests for the implementation
 mode: subagent
 default_provider: GitHub Copilot
-default_model: GPT-5 mini (copilot)
+default_model: github-copilot/claude-sonnet-4.6
 temperature: 0.0
 max_steps: 6
 tools_allow: read,edit,search,bash

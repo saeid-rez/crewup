@@ -125,7 +125,7 @@ func TestCopilotWriterFilenameAndPath(t *testing.T) {
 	}
 }
 
-func TestCopilotWriterModelStripsPrefix(t *testing.T) {
+func TestCopilotWriterModelUsesDisplayName(t *testing.T) {
 	role := testRole()
 	role.Model = &config.ModelSelection{
 		Provider:   "GitHub Copilot",
@@ -133,12 +133,18 @@ func TestCopilotWriterModelStripsPrefix(t *testing.T) {
 		Customized: true,
 	}
 	content := renderCopilotAgentFile(role)
-	// Should strip "github-copilot/" prefix
 	if strings.Contains(content, "github-copilot/") {
 		t.Error("Copilot model field should not contain 'github-copilot/' prefix")
 	}
-	if !strings.Contains(content, "claude-sonnet-4.6") {
-		t.Error("Copilot model field should contain 'claude-sonnet-4.6'")
+	if !strings.Contains(content, "Claude Sonnet 4.6 (Copilot)") {
+		t.Error("Copilot model field should contain the model display name")
+	}
+}
+
+func TestCopilotWriterUsesDefaultDisplayNameForUncustomizedRole(t *testing.T) {
+	content := renderCopilotAgentFile(testRole())
+	if !strings.Contains(content, "model: Claude Sonnet 4.6 (Copilot)") {
+		t.Errorf("expected default Copilot display name in output, got:\n%s", content)
 	}
 }
 

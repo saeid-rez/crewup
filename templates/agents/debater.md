@@ -4,7 +4,7 @@ name: Debater
 description: Challenges assumptions and debates design decisions
 mode: subagent
 default_provider: GitHub Copilot
-default_model: GPT-5.4 (copilot)
+default_model: github-copilot/claude-sonnet-4.6
 temperature: 0.3
 max_steps: 4
 tools_allow: read,search,edit,web

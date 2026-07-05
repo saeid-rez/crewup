@@ -8,6 +8,7 @@ import (
 
 	"github.com/saeid-rez/crewup/internal/agentdefs"
 	"github.com/saeid-rez/crewup/internal/config"
+	"github.com/saeid-rez/crewup/internal/models"
 )
 
 // renderToolsForCopilot maps crewup tool aliases to GitHub Copilot tool names.
@@ -45,6 +46,20 @@ func effectiveModel(role config.AgentRole) string {
 		return def.DefaultModel
 	}
 	return ""
+}
+
+func effectiveCopilotModel(role config.AgentRole) string {
+	modelID := effectiveModel(role)
+	if modelID == "" {
+		return ""
+	}
+	if m, ok := models.ByModelID(modelID); ok && m.DisplayName != "" {
+		return m.DisplayName
+	}
+	if strings.HasPrefix(modelID, "github-copilot/") {
+		return strings.TrimPrefix(modelID, "github-copilot/")
+	}
+	return modelID
 }
 
 // effectiveToolsAllow returns the tools_allow aliases for a role.
@@ -130,12 +145,7 @@ func renderCopilotAgentFile(role config.AgentRole) string {
 	sb.WriteString(fmt.Sprintf("name: %s\n", role.ID))
 	sb.WriteString(fmt.Sprintf("description: %s\n", role.Description))
 
-	model := effectiveModel(role)
-	// Strip "github-copilot/" prefix for Copilot model field
-	copilotModel := model
-	if strings.HasPrefix(copilotModel, "github-copilot/") {
-		copilotModel = strings.TrimPrefix(copilotModel, "github-copilot/")
-	}
+	copilotModel := effectiveCopilotModel(role)
 	if copilotModel != "" {
 		sb.WriteString(fmt.Sprintf("model: %s\n", copilotModel))
 	}
