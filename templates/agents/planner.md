@@ -4,7 +4,7 @@ name: Planner
 description: Clarifies the request first, then creates a plan
 mode: primary
 default_provider: GitHub Copilot
-default_model: Claude Sonnet 4.6 (copilot)
+default_model: github-copilot/claude-sonnet-4.6
 temperature: 0.1
 max_steps: 8
 tools_allow: read,search,edit,web

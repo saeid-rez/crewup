@@ -87,6 +87,16 @@ func DefaultFor(provider string) (Model, bool) {
 	return models[0], true
 }
 
+// ByModelID returns the model entry for the given canonical model ID.
+func ByModelID(modelID string) (Model, bool) {
+	for _, m := range All() {
+		if m.ModelID == modelID {
+			return m, true
+		}
+	}
+	return Model{}, false
+}
+
 func parseBool(s string) bool {
 	b, _ := strconv.ParseBool(strings.TrimSpace(s))
 	return b

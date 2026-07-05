@@ -4,7 +4,7 @@ name: Security Reviewer
 description: Performs security-focused code review
 mode: subagent
 default_provider: GitHub Copilot
-default_model: GPT-5.4 (copilot)
+default_model: github-copilot/claude-sonnet-4.6
 temperature: 0.1
 max_steps: 5
 tools_allow: read,search,web

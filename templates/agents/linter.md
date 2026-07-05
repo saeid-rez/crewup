@@ -4,7 +4,7 @@ name: Linter
 description: Checks code style, formatting, and static analysis
 mode: subagent
 default_provider: GitHub Copilot
-default_model: GPT-5 mini (copilot)
+default_model: github-copilot/claude-sonnet-4.6
 temperature: 0.0
 max_steps: 4
 tools_allow: read,search,edit,bash
