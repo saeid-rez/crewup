@@ -19,6 +19,7 @@ func runMainMenu() error {
 			[]ui.MenuOption{
 				{ID: "init", Title: "Init", Description: "Detect AI tools and set up your crew from scratch."},
 				{ID: "add", Title: "Add", Description: "Add an MCP server or an agent role to an existing setup."},
+				{ID: "workflow", Title: "Stash Workflow State", Description: "Archive the current WORKFLOW_STATE.md and start a clean one."},
 				{ID: "list", Title: "List", Description: "Show your current crewup configuration."},
 				{ID: "version", Title: "Version", Description: "Show the installed crewup version."},
 				{ID: "update", Title: "Update", Description: "Update crewup to the latest release."},
@@ -39,6 +40,8 @@ func runMainMenu() error {
 			runErr = runInit()
 		case "add":
 			runErr = runAddMenu()
+		case "workflow":
+			runErr = runWorkflowStash()
 		case "list":
 			runErr = runList()
 		case "version":
